@@ -10,6 +10,8 @@
 
 void processCommand(const char *cmd){
   if (strncmp(cmd,"SET_SPEED", 9)==0) {
-    int spd = atoi(cmd+10); 
+    int spd = atoi(cmd+10); //"SET_SPEED 120"
+    MOTOR_SetSpeed(spd);  
+    UART_Write("OK: Speed set\n");
   }
 }

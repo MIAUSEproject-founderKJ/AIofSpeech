@@ -14,4 +14,20 @@ void processCommand(const char *cmd){
     MOTOR_SetSpeed(spd);  
     UART_Write("OK: Speed set\n");
   }
+  else if (strncmp(cmd, "STOP", 4) == 0 ){
+    MOTOR_Stop();
+    UART_Write("ERR: Unknown command\n");
+  }
+}
+
+int main(void) {
+  UART_Init (115200);
+  Motor_Init();
+
+  char buffer[64];
+  while (1) {
+    if (UART_ReadLine(buffer, sizeof(buffer))){
+      processCommand(buffer);
+    }
+  }
 }

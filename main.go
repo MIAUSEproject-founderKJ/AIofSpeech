@@ -12,6 +12,7 @@
 package main
 
 import (
+	"os/exec"
 	"context"
 	"encoding/json"
 	"errors"
@@ -233,6 +234,26 @@ func forceGC() {
 	log.Println("Garbage collection requested")
 }
 
+//define a struct to represent response from Python
+type PyCacheResponse struct{
+	Value string 'json:"value"
+	Exists bool   `json:"exists"`
+}
+
+func pythonCacheGet(ket string) (string, bool, error){
+	//Run python and call cache module.get()
+	cmd:=exec.Command("python", "cache_module.py", key) 
+	out,err :=cmd.Output()
+	
+	if err !=nil{ return "", false,fmt.Errorf("python error: %v", err)}
+
+	var Resp PyCacheResponse 
+	if err := json.Unmarshal(out, &resp); err!=nil 
+	{return "",false,err}
+	
+	return resp.Value, resp.Exists, nil
+}
+
 func main() {
 	// Example: load config from env or args — here we hardcode for demo
 	cfg := &Config{Name: "MySpeechModel", Purpose: "Realtime command transcription"}
@@ -307,7 +328,17 @@ func main() {
 	// wait for goroutines to finish
 	wg.Wait()
 
+
+	    val, ok, err := pythonCacheGet("myKey")
+    if err != nil {
+        fmt.Println("Error:", err)
+        return
+    }
+    fmt.Println("Value:", val, "Exists:", ok)
+	
 	// final cleanup
 	forceGC()
 	log.Println("Shutdown complete")
+
+	
 }

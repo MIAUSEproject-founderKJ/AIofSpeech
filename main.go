@@ -12,6 +12,8 @@
 package main
 
 import (
+	"bytes"
+	"net/http"
 	"os/exec"
 	"context"
 	"encoding/json"
@@ -235,23 +237,25 @@ func forceGC() {
 }
 
 //define a struct to represent response from Python
-type PyCacheResponse struct{
+type CacheResponse struct{
 	Value string 'json:"value"
 	Exists bool   `json:"exists"`
 }
 
 func pythonCacheGet(ket string) (string, bool, error){
 	//Run python and call cache module.get()
-	cmd:=exec.Command("python", "cache_module.py", key) 
-	out,err :=cmd.Output()
-	
-	if err !=nil{ return "", false,fmt.Errorf("python error: %v", err)}
+	reqBody, _:=json.Marshal(map[string] string{"key":key})
 
-	var Resp PyCacheResponse 
-	if err := json.Unmarshal(out, &resp); err!=nil 
-	{return "",false,err}
-	
-	return resp.Value, resp.Exists, nil
+	client:= &http.Client{Timeout:2*time.Second}
+	resp,err:=client.Post("http://127.0.0.1:5000/cache/get"), "application/json", bytes.NewBuffer(reqBody))
+	if err!=nil{return "", false, err}
+}
+
+defer resp.Body.Close()
+
+var result CacheResponse
+if err:=json.NewDecoder(resp.Body).Decode(&result); err!=nil{return "",false,err}
+return result.Value, result.Exists, nil
 }
 
 func main() {
@@ -329,12 +333,12 @@ func main() {
 	wg.Wait()
 
 
-	    val, ok, err := pythonCacheGet("myKey")
+	    val, exists, err := pythonCacheGet("hello")
     if err != nil {
-        fmt.Println("Error:", err)
+        fmt.Println("Error calling cache API:", err)
         return
     }
-    fmt.Println("Value:", val, "Exists:", ok)
+    fmt.Printf("Got value: %v, exists: %v\n", val, exists)
 	
 	// final cleanup
 	forceGC()
